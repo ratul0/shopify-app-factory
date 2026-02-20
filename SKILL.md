@@ -31,20 +31,79 @@ Default stack (escape hatches noted per phase):
 
 ### Phase Overview
 
-| Phase | Handler | Gate |
-|-------|---------|------|
-| 1. Discovery | Inline (below) | User confirms App Specification |
-| 2. Reddit Research | `agents/researcher.md` | User confirms research findings |
-| 3. Architecture | `agents/architect.md` | User approves Architecture Document |
-| 4. Scaffolding | Inline (below) | Project runs `npm run dev` successfully |
-| 5. Implementation | `agents/implementor.md` | All code validated via MCP |
-| 6. Deployment | Inline (below) | App accessible at production URL |
-| 7. App Store Prep | Delegate to `shopify-app-release-assistant` | 14 deliverables complete |
+| Phase | Handler | Execution | Gate |
+|-------|---------|-----------|------|
+| 1. Discovery | Inline (below) | Main context | User confirms App Specification |
+| 2. Reddit Research | `agents/researcher.md` | **Sub-agent** | User confirms research findings |
+| 3. Architecture | `agents/architect.md` | **Sub-agent** | User approves Architecture Document |
+| 4. Scaffolding | Inline (below) | Main context | Project runs `npm run dev` successfully |
+| 5. Implementation | `agents/implementor.md` | **Sub-agent(s)** | All code validated via MCP |
+| 6. Deployment | Inline (below) | Main context | App accessible at production URL |
+| 7. App Store Prep | `shopify-app-release-assistant` | Skill delegation | 14 deliverables complete |
 
 **Rules:**
 - Never skip a phase. Each phase produces a deliverable that feeds the next.
 - Always get user confirmation before advancing to the next phase.
 - Load reference files on-demand (instructions below), never all at once.
+
+### Context Window Management
+
+**Critical:** Do NOT run all phases in the main context. Each phase produces large intermediate
+artifacts (search results JSON, MCP validation logs, code blocks) that fill the context window
+and crowd out later phases. Use **sub-agents** (via the Task tool) for phases with dedicated
+agent files.
+
+**How it works:**
+
+| Phase | Execution | Why |
+|-------|-----------|-----|
+| 1. Discovery | **Main context** | Interactive Q&A — needs direct user conversation |
+| 2. Reddit Research | **Sub-agent** | Produces large JSON from Reddit searches; only the final Research Report returns to main |
+| 3. Architecture | **Sub-agent** | MCP tool calls produce verbose output; only the final Architecture Document returns to main |
+| 4. Scaffolding | **Main context** | Short phase — runs CLI commands, verifies `npm run dev` |
+| 5. Implementation | **Sub-agent(s)** | Largest phase — delegate feature-by-feature; each feature gets its own sub-agent context |
+| 6. Deployment | **Main context** | Short phase — runs deployment commands |
+| 7. App Store Prep | **Skill delegation** | Delegates to `shopify-app-release-assistant` |
+
+**Sub-agent pattern:**
+
+When delegating to a sub-agent, pass:
+1. The agent prompt file content (e.g., `agents/researcher.md`)
+2. The relevant reference files (e.g., `references/reddit-research-guide.md`)
+3. The deliverables from prior phases (e.g., App Specification)
+4. Clear instructions on what deliverable to return
+
+The sub-agent does its work autonomously, interacts with the user as needed,
+and returns a concise deliverable. The main context stores ONLY the deliverable,
+not the sub-agent's intermediate work.
+
+**Example — launching Phase 2 as a sub-agent:**
+
+```
+Use the Task tool to launch a sub-agent with this prompt:
+
+"You are the Reddit Market Researcher for a Shopify app.
+
+[Paste contents of agents/researcher.md]
+[Paste contents of references/reddit-research-guide.md]
+
+## Your Task
+Research the following app idea on Reddit and produce a Reddit Research Report.
+
+## App Specification
+[Paste App Specification from Phase 1]
+
+## Instructions
+- Use scripts/reddit-researcher.js for all Reddit searches
+- Present search queries to the user before executing
+- Present findings conversationally, then offer the decision gate
+- Return: (1) the Reddit Research Report, and (2) the App Specification (updated if user refined it)"
+```
+
+**For Phase 5 (Implementation)**, launch a separate sub-agent for each major feature group
+(e.g., "Prisma schema + migrations", "Admin routes", "Proxy routes", "Worker setup").
+Pass the Architecture Document to each. This prevents a single massive context from handling
+all implementation at once.
 
 ---
 
@@ -96,14 +155,24 @@ Ask the user to confirm before proceeding. After confirmation, automatically pro
 
 ## Phase 2: Reddit Research
 
-Load and follow `agents/researcher.md`.
+**Delegate to a sub-agent.** Do not run this phase in the main context.
+
+Launch a sub-agent (Task tool) with:
+- Prompt: contents of `agents/researcher.md`
+- Reference: contents of `references/reddit-research-guide.md`
+- Input: App Specification from Phase 1
+- Script path: `scripts/reddit-researcher.js` (for Reddit searches)
 
 **Inputs:** App Specification from Phase 1.
 **Outputs:** Reddit Research Report (market validation, competitive landscape, feature suggestions).
 
-This phase triggers automatically after Phase 1 confirmation. The researcher uses
+This phase triggers automatically after Phase 1 confirmation. The sub-agent researcher uses
 `scripts/reddit-researcher.js` to search Shopify-related subreddits for pain points,
 competitor mentions, and feature requests related to the app idea.
+
+The sub-agent interacts with the user directly (query approval, decision gate). When it
+completes, store only the returned **Reddit Research Report** and **App Specification**
+(which may have been updated) in the main context. Discard intermediate search results.
 
 **Transition:** Requires user confirmation. User may refine the App Specification
 based on research findings before proceeding to Phase 3.
@@ -112,12 +181,19 @@ based on research findings before proceeding to Phase 3.
 
 ## Phase 3: Architecture
 
-Load and follow `agents/architect.md`.
+**Delegate to a sub-agent.** Do not run this phase in the main context.
+
+Launch a sub-agent (Task tool) with:
+- Prompt: contents of `agents/architect.md`
+- Inputs: App Specification + Reddit Research Report
+- Access to Shopify MCP tools
 
 **Inputs:** App Specification from Phase 1, Reddit Research Report from Phase 2.
 **Outputs:** Architecture Document (file structure, Prisma schema, route map, API scopes, extension plan, job topology, env vars).
 
 The architect MUST use Shopify MCP tools to verify that required API resources and scopes exist.
+When the sub-agent completes, store only the returned **Architecture Document** in the main context.
+Discard MCP tool call logs and intermediate schema explorations.
 
 ---
 
@@ -153,12 +229,30 @@ Audit the existing codebase against the Architecture Document:
 
 ## Phase 5: Implementation
 
-Load and follow `agents/implementor.md`.
+**Delegate to sub-agent(s).** Do not run this phase entirely in the main context.
+
+This is the largest phase. Launch **separate sub-agents per feature group** to prevent
+context overflow. Each sub-agent receives:
+- Prompt: contents of `agents/implementor.md`
+- Relevant reference files for the feature being implemented
+- The Architecture Document (for contracts and schemas)
+- The specific feature group to implement
+
+**Suggested feature groups** (each gets its own sub-agent):
+1. Prisma schema + migrations + `shopify.server.ts`
+2. Admin routes + Polaris UI
+3. Proxy routes (if needed)
+4. Services layer + GraphQL utilities
+5. Worker + background jobs (if needed)
+6. Extensions + Liquid (if needed)
+7. Webhook handlers + Docker + deployment config
 
 **Inputs:** Architecture Document, scaffolded project.
 **Outputs:** Feature-complete application with all code validated via MCP.
 
-Implementation follows a fixed order to manage dependencies correctly. The implementor handles MCP validation of all GraphQL, Polaris, and Liquid code.
+Implementation follows a fixed order to manage dependencies correctly. Each sub-agent handles
+MCP validation of its own code. After each sub-agent completes, verify the feature works
+before launching the next.
 
 ---
 
