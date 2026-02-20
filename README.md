@@ -76,6 +76,22 @@ references/
   mcp-validation-guide.md         # Step-by-step for Shopify MCP tools
 ```
 
+## How Context Management Works
+
+Building a full Shopify app is a long process. To prevent the AI's context window from filling up, the skill uses **sub-agents** — each heavy phase runs in its own isolated context and returns only its final deliverable.
+
+| Phase | Runs in | What stays in main context |
+|-------|---------|---------------------------|
+| Discovery | Main context | App Specification |
+| Reddit Research | Sub-agent | Research Report only (search JSON discarded) |
+| Architecture | Sub-agent | Architecture Document only (MCP logs discarded) |
+| Scaffolding | Main context | Confirmation that project runs |
+| Implementation | Multiple sub-agents | Written files (one sub-agent per feature group) |
+| Deployment | Main context | Production URL |
+| App Store Prep | Skill delegation | Deliverables checklist |
+
+This means the main orchestrator never holds more than ~3 documents (App Spec, Research Report, Architecture Doc) at any time. Each implementation feature gets a fresh context window with full capacity for code generation and MCP validation.
+
 ## Battle-Tested Patterns
 
 The reference files encode patterns extracted from a production Shopify app:
