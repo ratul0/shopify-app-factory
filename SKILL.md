@@ -4,7 +4,7 @@ description: >
   Build production-ready Shopify apps from idea to deployment. Use this skill when the user wants to
   build a Shopify app, create a Shopify extension, scaffold a new Shopify project, add features to an
   existing Shopify app, or says "build me a Shopify app". Covers the full lifecycle: discovery,
-  architecture, scaffolding, implementation, deployment, and App Store submission. Encodes
+  market research, architecture, scaffolding, implementation, deployment, and App Store submission. Encodes
   battle-tested patterns from production Shopify apps including two-context auth, atomic credit
   claiming, BullMQ background jobs, S3 storage, and Polaris Web Components.
 ---
@@ -12,7 +12,7 @@ description: >
 # Shopify App Factory
 
 You are a Shopify app development specialist. You guide the user from a raw idea to a deployed,
-App Store-ready application using a structured 6-phase process with mandatory validation at every step.
+App Store-ready application using a structured 7-phase process with mandatory validation at every step.
 
 ## Stack
 
@@ -34,11 +34,12 @@ Default stack (escape hatches noted per phase):
 | Phase | Handler | Gate |
 |-------|---------|------|
 | 1. Discovery | Inline (below) | User confirms App Specification |
-| 2. Architecture | `agents/architect.md` | User approves Architecture Document |
-| 3. Scaffolding | Inline (below) | Project runs `npm run dev` successfully |
-| 4. Implementation | `agents/implementor.md` | All code validated via MCP |
-| 5. Deployment | Inline (below) | App accessible at production URL |
-| 6. App Store Prep | Delegate to `shopify-app-release-assistant` | 14 deliverables complete |
+| 2. Reddit Research | `agents/researcher.md` | User confirms research findings |
+| 3. Architecture | `agents/architect.md` | User approves Architecture Document |
+| 4. Scaffolding | Inline (below) | Project runs `npm run dev` successfully |
+| 5. Implementation | `agents/implementor.md` | All code validated via MCP |
+| 6. Deployment | Inline (below) | App accessible at production URL |
+| 7. App Store Prep | Delegate to `shopify-app-release-assistant` | 14 deliverables complete |
 
 **Rules:**
 - Never skip a phase. Each phase produces a deliverable that feeds the next.
@@ -89,22 +90,38 @@ After gathering answers, produce a structured specification:
 **Key Workflows:** [numbered list of user stories]
 ```
 
-Ask the user to confirm before proceeding.
+Ask the user to confirm before proceeding. After confirmation, automatically proceed to Phase 2.
 
 ---
 
-## Phase 2: Architecture
+## Phase 2: Reddit Research
+
+Load and follow `agents/researcher.md`.
+
+**Inputs:** App Specification from Phase 1.
+**Outputs:** Reddit Research Report (market validation, competitive landscape, feature suggestions).
+
+This phase triggers automatically after Phase 1 confirmation. The researcher uses
+`scripts/reddit-researcher.js` to search Shopify-related subreddits for pain points,
+competitor mentions, and feature requests related to the app idea.
+
+**Transition:** Requires user confirmation. User may refine the App Specification
+based on research findings before proceeding to Phase 3.
+
+---
+
+## Phase 3: Architecture
 
 Load and follow `agents/architect.md`.
 
-**Inputs:** App Specification from Phase 1.
+**Inputs:** App Specification from Phase 1, Reddit Research Report from Phase 2.
 **Outputs:** Architecture Document (file structure, Prisma schema, route map, API scopes, extension plan, job topology, env vars).
 
 The architect MUST use Shopify MCP tools to verify that required API resources and scopes exist.
 
 ---
 
-## Phase 3: Scaffolding
+## Phase 4: Scaffolding
 
 Based on the Architecture Document:
 
@@ -134,7 +151,7 @@ Audit the existing codebase against the Architecture Document:
 
 ---
 
-## Phase 4: Implementation
+## Phase 5: Implementation
 
 Load and follow `agents/implementor.md`.
 
@@ -145,7 +162,7 @@ Implementation follows a fixed order to manage dependencies correctly. The imple
 
 ---
 
-## Phase 5: Deployment
+## Phase 6: Deployment
 
 Load `references/deployment-flyio.md` for patterns.
 
@@ -166,7 +183,7 @@ Load `references/security-checklist.md` and verify all items pass before deployi
 
 ---
 
-## Phase 6: App Store Prep
+## Phase 7: App Store Prep
 
 Delegate entirely to the `shopify-app-release-assistant` skill. It handles:
 - App listing copy (name, tagline, description, screenshots)
@@ -220,13 +237,14 @@ Load reference files ONLY when entering the relevant phase or making a relevant 
 
 | When | Load |
 |------|------|
-| Phase 3 (Scaffolding) | `references/stack-blueprint.md` |
-| Phase 2 or 4 (Auth design/implementation) | `references/auth-patterns.md` |
-| Phase 2 or 4 (Data model design/implementation) | `references/data-patterns.md` |
-| Phase 4 (Implementing background jobs) | `references/background-jobs.md` |
-| Phase 5 (Deployment) | `references/deployment-flyio.md` |
-| Phase 5 (Security audit) | `references/security-checklist.md` |
-| Phase 4 (Building extensions) | `references/extension-templates.md` |
+| Phase 2 (Reddit Research) | `references/reddit-research-guide.md` |
+| Phase 4 (Scaffolding) | `references/stack-blueprint.md` |
+| Phase 3 or 5 (Auth design/implementation) | `references/auth-patterns.md` |
+| Phase 3 or 5 (Data model design/implementation) | `references/data-patterns.md` |
+| Phase 5 (Implementing background jobs) | `references/background-jobs.md` |
+| Phase 6 (Deployment) | `references/deployment-flyio.md` |
+| Phase 6 (Security audit) | `references/security-checklist.md` |
+| Phase 5 (Building extensions) | `references/extension-templates.md` |
 | Any phase (Using MCP tools) | `references/mcp-validation-guide.md` |
 
 ---
@@ -238,9 +256,9 @@ Delegate to these skills at the appropriate moments:
 | Skill | When to Delegate |
 |-------|-----------------|
 | `frontend-design` | When building admin UI pages that need polished design |
-| `vercel-react-best-practices` | During Phase 4 when writing React components |
-| `react-doctor` | After Phase 4 to audit React code quality |
-| `shopify-app-release-assistant` | Phase 6 entirely |
+| `vercel-react-best-practices` | During Phase 5 when writing React components |
+| `react-doctor` | After Phase 5 to audit React code quality |
+| `shopify-app-release-assistant` | Phase 7 entirely |
 
 Delegation format: Mention the skill name so it triggers automatically.
 
