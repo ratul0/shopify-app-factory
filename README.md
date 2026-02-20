@@ -18,17 +18,17 @@ Every piece of Shopify-specific code (GraphQL, Polaris components, Liquid templa
 ## Install
 
 ```bash
-npx skills add yafi/shopify-app-factory
+npx skills add ratul0/shopify-app-factory
 ```
 
 Or with a specific agent:
 
 ```bash
 # Claude Code
-npx skills add yafi/shopify-app-factory --agent claude-code
+npx skills add ratul0/shopify-app-factory --agent claude-code
 
 # Amp
-npx skills add yafi/shopify-app-factory --agent amp
+npx skills add ratul0/shopify-app-factory --agent amp
 ```
 
 ## Usage
@@ -92,7 +92,7 @@ Works well with:
 
 - [`vercel-react-best-practices`](https://github.com/vercel-labs/skills) — React optimization during implementation
 - [`frontend-design`](https://skills.sh) — Polished admin UI design
-- [`shopify-app-release-assistant`](https://github.com/yafi/shopify-app-release-assistant) — App Store submission (auto-delegated in Phase 6)
+- [`shopify-app-release-assistant`](https://github.com/ratul0/shopify-app-release-assistant) — App Store submission (auto-delegated in Phase 6)
 
 ## License
 
